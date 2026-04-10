@@ -69,28 +69,31 @@ Agent 도구로 Opus advisor 서브에이전트를 호출한다.
 
 ### Phase 3: Codex 위임 — 코드 작성
 
-**메인 세션이 직접 코드를 작성하지 않는다.** 반드시 Skill 도구를 사용하여 Codex에게 위임한다.
+**메인 세션이 직접 코드를 작성하지 않는다.** 반드시 Bash 도구로 `codex exec` 명령어를 실행하여 Codex에게 위임한다. 이렇게 하면 코드 생성 토큰이 OpenAI 쪽으로 분산된다.
 
-**호출 방법:** Skill 도구를 아래와 같이 호출한다:
-- `skill`: `"codex"`
-- `args`: Codex에게 전달할 구체적인 작업 지시 문자열
+**호출 방법:** Bash 도구로 `codex exec`를 실행한다:
 
-예시:
-```
-Skill(skill: "codex", args: "src/backtest/engine.py 파일에 EventDrivenEngine 클래스를 생성해줘. BaseEngine을 상속하고, run() 메서드에서 이벤트 루프를 구현해야 한다. 기존 코드 패턴은 src/strategy/base.py의 ABC 패턴을 따른다.")
+```bash
+codex exec "구체적인 작업 지시를 여기에 작성한다"
 ```
 
-**args에 포함할 내용:**
+**실제 예시:**
+```bash
+codex exec "src/backtest/engine.py 파일에 EventDrivenEngine 클래스를 생성해줘. BaseEngine을 상속하고, run() 메서드에서 이벤트 루프를 구현해야 한다. 기존 코드 패턴은 src/strategy/base.py의 ABC 패턴을 따른다."
+```
+
+**codex exec 프롬프트에 포함할 내용:**
 - Advisor가 제시한 구현 계획 중 현재 단계
 - 대상 파일 경로
-- 따라야 할 코드 패턴 및 컨벤션
+- 따라야 할 코드 패턴 및 컨벤션 (구체적으로 — Codex는 프로젝트 컨텍스트를 모를 수 있음)
 - 구체적인 구현 범위 (한 번에 하나의 명확한 단위)
 
 **Codex 호출 원칙:**
-- **절대로 Edit, Write 도구로 직접 코드를 작성하지 않는다** — 코드 작성은 모두 Codex를 통한다
+- **절대로 Edit, Write 도구로 직접 코드를 작성하지 않는다** — 코드 작성은 모두 `codex exec`를 통한다
 - 한 번에 하나의 파일 또는 하나의 기능 단위만 요청한다
 - Advisor의 계획에서 벗어나는 작업은 요청하지 않는다
-- 작성된 코드를 반드시 확인한 후 다음 단계로 진행한다
+- `codex exec` 실행 후 작성된 코드를 Read로 반드시 확인한 후 다음 단계로 진행한다
+- Codex 실행이 오래 걸릴 수 있으므로 `timeout: 300000` (5분)을 설정한다
 
 ### Phase 4: 검증
 
