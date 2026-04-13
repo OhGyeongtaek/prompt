@@ -42,3 +42,38 @@ done
 
 echo ""
 echo "done: $linked linked, $skipped skipped"
+
+# ── Claude Code settings.json 설정 ──────────────────────────────
+SETTINGS_FILE="$HOME/.claude/settings.json"
+
+if ! command -v jq &>/dev/null; then
+    echo ""
+    echo "[warn] jq가 설치되어 있지 않아 settings.json 설정을 건너뜁니다."
+    echo "       brew install jq 후 다시 실행하세요."
+    exit 0
+fi
+
+if [ ! -f "$SETTINGS_FILE" ]; then
+    echo '{}' > "$SETTINGS_FILE"
+fi
+
+echo ""
+echo "Updating Claude Code settings..."
+
+# 기존 설정을 보존하면서 병합
+tmp=$(mktemp)
+jq '
+  .model = "sonnet" |
+  .env = (.env // {}) * {
+    "MAX_THINKING_TOKENS": "10000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
+  }
+' "$SETTINGS_FILE" > "$tmp" && mv "$tmp" "$SETTINGS_FILE"
+
+echo "[set] model = sonnet"
+echo "[set] MAX_THINKING_TOKENS = 10000"
+echo "[set] CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = 50"
+echo "[set] CLAUDE_CODE_SUBAGENT_MODEL = haiku"
+echo ""
+echo "settings updated: $SETTINGS_FILE"
