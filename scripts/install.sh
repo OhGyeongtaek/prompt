@@ -77,3 +77,48 @@ echo "[set] CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = 50"
 echo "[set] CLAUDE_CODE_SUBAGENT_MODEL = haiku"
 echo ""
 echo "settings updated: $SETTINGS_FILE"
+
+# ── claude-hud 설치 ──────────────────────────────────────────────
+echo ""
+echo "Installing claude-hud..."
+
+CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+CLAUDE_HUD_CACHE_DIR="$CLAUDE_CONFIG_DIR/plugins/cache/claude-hud/claude-hud"
+
+# 이미 설치된 버전 확인
+if ls -d "$CLAUDE_HUD_CACHE_DIR"/*/  &>/dev/null; then
+    HUD_VERSION=$(ls -d "$CLAUDE_HUD_CACHE_DIR"/*/ | awk -F/ '{ print $(NF-1) }' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+    echo "[skip] claude-hud $HUD_VERSION already installed"
+else
+    # 최신 버전 태그 가져오기
+    if command -v git &>/dev/null; then
+        HUD_VERSION=$(git ls-remote --tags https://github.com/jarrodwatts/claude-hud 2>/dev/null \
+            | awk -F/ '{ print $NF }' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+        HUD_VERSION="${HUD_VERSION:-0.0.12}"
+    else
+        HUD_VERSION="0.0.12"
+    fi
+
+    HUD_INSTALL_DIR="$CLAUDE_HUD_CACHE_DIR/$HUD_VERSION"
+    mkdir -p "$HUD_INSTALL_DIR"
+
+    git clone --depth 1 --branch "v$HUD_VERSION" \
+        https://github.com/jarrodwatts/claude-hud "$HUD_INSTALL_DIR" 2>/dev/null \
+    || git clone --depth 1 \
+        https://github.com/jarrodwatts/claude-hud "$HUD_INSTALL_DIR"
+
+    echo "[installed] claude-hud $HUD_VERSION → $HUD_INSTALL_DIR"
+fi
+
+# statusLine 설정 추가 (jq 필요)
+if command -v jq &>/dev/null; then
+    RUNTIME_PATH=$(command -v node 2>/dev/null || echo "node")
+    STATUS_CMD="$RUNTIME_PATH \"$CLAUDE_HUD_CACHE_DIR/$HUD_VERSION/dist/index.js\""
+
+    tmp=$(mktemp)
+    jq --arg cmd "$STATUS_CMD" \
+        '.statusLine = {"type": "command", "command": $cmd}' \
+        "$SETTINGS_FILE" > "$tmp" && mv "$tmp" "$SETTINGS_FILE"
+    echo "[set] statusLine = claude-hud"
+fi
